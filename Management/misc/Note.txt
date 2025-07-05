@@ -1,0 +1,95 @@
+@AllArgsConstructor会把@Data(若没有@Nonnull和final字段则会生成无参构造)生成的无参构造覆盖掉，对外表现为没有无参构造
+
+try块中无论是主动抛出(通过throw语句)还是被动抛出(由Java方法自动抛出)的异常，只要属于try块中代码可能抛出的类型，并且被对应的catch块声明捕获，就会被捕获处理
+
+s==null判断字符串引用是否未指向任何对象，与s.isEmpty()和s.length==0不同，若s=null然后调用后两个则会抛出NullPointerException
+
+当try块中的某条语句抛出异常时，立即停止执行try块中剩余的代码，并寻找匹配的catch块；按顺序检查每个catch块的异常类型，找到第一个能捕获该异常类型(或其父类)的catch块，进入该块执行代码；执行catch块内的代码(如打印错误信息、处理异常)；执行完catch块后，不会回到try块中继续执行剩余代码，而是继续执行try-catch结构之后的代码
+
+当使用局部变量时，Java编译器会确保所有可能的执行路径都为变量赋值，否则会报错；即使存在分支路径会给变量赋值，但只要存在一条路径未赋值，就会编译失败；
+Java对局部变量的初始化要求非常严格：无论逻辑上是否必然赋值，编译器必须确保所有可能的执行路径都为变量赋值；若存在任何未赋值的路径，即使业务上不可能触发，仍会导致编译错误，比如AdminService中修改学生的switch(select)，业务上确保了select只能为0，1，2，但编译器无法推断select的取值范围，所以即使补充了在select=0的语句段里给变量赋值，仍会编译失败
+
+SELECT * FROM students LIMIT ? OFFSET ?，OFFSET ?表示跳过前?行，一般是设置LIMIT pageSize -> 一页的大小，OFFSET (pageNum-1)*pageSize -> (页码-1)*一页的大小
+MySQL不支持在OFFSET后使用带括号的表达式(? - 1) * 10，这会导致SQL语法错误，应在Java代码中计算OFFSET值
+
+不要忘记表中数据为空的情况
+
+★★★★★
+instanceof的作用是判断一个对象是否是某个类(或接口)的实例，它在运行时通过对象的实际类型信息(存储在对象头中的元数据)进行判断，与编译时的泛型类型无关，例如：
+List<String> strList = new ArrayList<>();
+System.out.println(strList.get(0) instanceof String); // 运行时判断元素是否为String实例
+这里，虽然List<String>的泛型参数String在编译后会被擦除为Object，但strList中元素的实际类型仍然是String，因此instanceof能正确判断
+
+在泛型方法中，(如printList(List<T> list))，虽然泛型参数T在编译时被擦除，但列表中的每个元素在运行时仍保留其具体类型(如StudengEntity)，因此：
+1.instanceof检查的是元素的实际类型，而非泛型参数T的编译时类型
+2.类型擦除不影响对象的实际类型信息，因为对象在创建时就已经确定了具体类型(如new StudentEntity())
+public static <T> void printList(List<T> list) {
+    for (T item : list) {
+        if (item instanceof StudentEntity) { // 运行时检查item是否为StudentEntity实例
+            // ...
+        } else if (item instanceof TeacherEntity) {
+            // ...
+        }
+    }
+}
+这里，item的编译时类型是T(被擦除为Object)，但运行时item的实际类型会被instanceof正确识别
+
+泛型与类型擦除的关系如下：
+1.类型擦除的本质
+Java泛型是编译时语法糖，编译后泛型参数会被擦除：无界泛型(如T)会被擦除为Object；有界泛型(如T extends Number)会被擦除为边界类型(Number)
+例如，List<T>编译后实际为List<Object>，但列表中的元素在运行时仍保持各自的实际类型(如Integer、Double)
+2.为什么instanceof在泛型中仍有效？
+泛型擦除仅影响编译时的类型检查，不影响对象在运行时的实际类型信息；instanceof依赖的是对象的运行时类型(存储在jvm的对象头中)，与编译时的泛型参数无关
+
+与多态场景的对比：
+1.多态中的instanceof
+Animal animal = new Dog();
+if (animal instanceof Dog) { // 检查运行时类型是否为Dog
+    Dog dog = (Dog) animal;
+}
+这里通过instanceof判断父类引用指向的实际子类对象，是多态的典型应用
+2.泛型中的instanceof
+List<Animal> animalList = Arrays.asList(new Dog(), new Cat());
+for (Animal animal : animalList) {
+    if (animal instanceof Dog) { // 检查元素实际类型
+        // ...
+    }
+}
+这里animalList的泛型类型是Animal，但instanceof仍能判断每个元素的实际类型(Dog或Cat)，本质上与多态场景的逻辑一致————都是基于对象的运行时类型进行判断
+
+注意事项：
+1.无法直接检查泛型参数T的类型：不能用if (T instanceof StudentEntity)，因为T在编译时已被擦除，无法在代码中直接引用，但可以检查泛型参数的实例(如item instanceof StudentEntity)
+2.异构集合的类型安全问题：若列表中存在不同类型的元素(如同时包含StudentEntity和TeacherEntity)，需通过instanceof进行类型检查后再强制转型，避免ClassCastException
+3.与泛型边界的配合：若泛型有边界(如T extends BaseEntity)，可结合边界类型进行更精准的检查：
+public static <T extends BaseEntity> void process(List<T> list) {
+    for (T item : list) {
+        if (item instanceof StudentEntity) {
+            // 处理学生
+        } else if (item instanceof TeacherEntity) {
+            // 处理教师
+        }
+    }
+}
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+使用select 日期字段 from 表，得到的是Date类型，需进行转换才可以与LocalDate比较，或者说使用LocalDate集合判断某LocalDate对象是否存在，而不能用Date集合来判断某LocalDate对象是否存在(一定不存在)
+
+删除数据的级联删除：
+删除学生 -> 删除成绩
+删除教师 -> 删除教师-课程 -> 删除授课计划 -> 删除成绩
+删除班级 -> 删除学生 -> 删除成绩
+删除课程 -> 删除教师-课程 -> 删除授课计划 -> 删除成绩
+删除成绩 -> 随便删
+删除教师-课程 -> 删除授课计划 -> 删除成绩                   随便删(×) 删除授课计划(更改：授课计划要增加一个复合外键(级联删除，防止删除教师与某课程的对应关系时，授课计划中仍然存在对应的计划安排)，依赖于教师-课程！，所以教师-课程也要增加一个唯一的复合约束，因为外键约束要求被引用的字段必须是主键或唯一键；授课计划对教师表和课程表的各自外键依赖需删掉，没有必要了，保留一个复合外键依赖于教师-课程即可保证依赖于教师表和课程表)
+删除授课计划 -> 删除成绩
+
+针对于上述的依赖关系按顺序写，所以成绩功能最好放最后写
+
+删除教师：
+教师课程存在，授课计划存在，成绩存在
+教师课程存在，授课计划存在，成绩不存在
+教师课程存在，授课计划不存在，成绩不存在
+教师课程不存在，授课计划不存在，成绩不存在
+
+grade_info中还需考虑(stu_id与teach_id复合键的唯一约束)

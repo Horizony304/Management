@@ -1,0 +1,4 @@
+最外层是Management文件夹，里面有.idea文件夹、lib文件夹（用来存放jar包）、misc文件夹（用来存放杂七杂八的东西）、resources文件夹（用来存放配置文件）、sql文件夹（用来存放sql脚本）、src文件夹、.gitignore、Management.iml
+其中src文件夹下有com.management软件包
+com.management软件包下有entity软件包（存放学生、老师等实体类的属性和简单方法的一些java文件）、service软件包（存放学生、老师等实体类的复杂行为的一些java文件）、test软件包（存放各个复杂行为的测试程序的java文件）、utils软件包（存放一些静态工具类的java文件）和一个命名为"Main"的java文件用于执行主程序
+

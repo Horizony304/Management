@@ -1,0 +1,79 @@
+(一).数据库设计
+实体：
+学生、老师、课程、成绩、管理员
+
+实体间的联系：
+学生-课程：多对多，需要中间表->成绩Grade，两个外键
+老师-课程：一对一(简单)，各自有对方的外键
+
+属性：
+学生(Student)：学号(stu_id)、姓名(stu_name)、性别(stu_gender)、专业(stu_major)、出生日期(stu_birth)、家庭住址(stu_addr)、紧急联系人电话(stu_tel)
+老师(Teacher)：教职工号(tea_id)、姓名(tea_name)、性别(tea_gender)、科目号(cou_id)、联系电话(tea_tel)
+课程(Course)：课程号(cou_id)、课程名(cou_name)、学分(cou_cre)、授课老师(tea_id)、先修课程号(cou_preid)(假设最多一个先修课程)
+成绩(Grade)：学号(stu_id)、课程号(cou_id)、平时成绩(g_daily)、期中成绩(g_mid)、期末成绩(g_final)、总分(g_sum)
+管理员(Admin)：工号(ad_id)、用户名(ad_uname)、密码(ad_pwd)
+
+补充：
+可以对高频查询字段添加索引(如stu_name、stu_major、Course的复合主键)
+可以对每个表添加创建时间(create_time)、更新时间(update_time)字段
+
+问题：
+字段同时设置not null和默认值不冲突，当显式指定字段值，此时必须满足not null约束(即指定的值不为null)，默认值不起作用；当未显式指定字段值时，数据库会自动使用默认值填充，此时默认值会作为非空值插入，满足not null约束
+课程表不要忘记设置复合主键(stu_id与cou_id)
+由于老师和课程各自有对方的外键，构成了循环依赖，无法创建表，此时可以先禁用外键检查(set foreign_key_checks = 0)，然后按任意顺序创建表，再启用外键检查(set foreign_key_checks = 1)，不会影响表结构中的外键约束，此方法仅适用于初始化表结构，创建表后应立即启用外键检查
+
+
+
+(二).编写实体类
+补充：
+JDBC支持直接映射LocalDate到SQL的date类型(后续发现不支持直接映射，见(六))，LocalDate可直接解析yyyy-MM-dd的字符串，使用静态方法parse(String)即可构造LocalDate对象
+
+
+
+(三).配置Druid文件，编写JDBCUtil
+补充：
+连接对象关闭后，也可以输出对象引用，输出为connection = closed-conn-381708767(在Druid连接池中获取的连接关闭后输出是这个，用驱动获取的连接关闭后输出结果与开启时一样)
+
+问题：
+JDBCUtil记得写私有无参构造，方法体中可以写throw new AssertionError("工具类不可实例化");，这是因为外部确实无法通过正常方式调用，编译阶段就会报错，但是可以通过反射强行调用私有构造方法，此时构造方法中的AssertionError会被抛出，阻止实例化并给出明确错误提示
+AssertionError是Error的子类，属于错误(Error)体系，而非异常(Exception)体系，其设计初衷是用于程序内部的断言检查，表示程序本身存在不可恢复的逻辑错误，而非外部输入或环境导致的异常情况；若有人强行通过反射调用工具类的私有构造方法，属于程序设计层面的错误，而非运行时可处理的异常，且Error不建议捕获，能强制暴露问题，同时Java标准库中的工具类也常用AssertionError禁止实例化
+忘记标记resources为资源根目录，导致Caused by: java.lang.NullPointerException: inStream parameter is null
+忘记给ThreadLocal创建对象，导致Cannot invoke "java.lang.ThreadLocal.get()" because "com.management.utils.JDBCUtil.threadLocal" is null
+忘记给DataSource创建对象，导致Cannot invoke "javax.sql.DataSource.getConnection()" because "com.management.utils.JDBCUtil.dataSource" is null
+
+
+
+(四).编写BaseDAO
+设置成抽象类防止实例化对象，供各实体DAO继承数据库操作的共性方法
+
+
+
+(五).编写实体DAO接口
+adDAO：
+编写方法时，觉得需要加一个Message表以实现通知功能：ad->tea、ad->stu、tea->stu
+编写删除方法时，认为需要修改教师表和课程表结构，不能一对一的互相依赖，这样永远也无法删除成功，为了简单，将老师和课程改为一对多，删除老师中的科目号属性，其他保持不动
+
+问题：
+即使打算增删改学生、老师、课程等操作想只有管理员能操作，但不意味着要把这些方法都放在管理员DAO里，DAO的职责是纯粹的数据访问，不关心调用者是谁，只负责对应实体的CRUD操作 -> 重新调整结构，删去DAO接口，直接编写DAO实现类；针对每个实体另外写服务类，把原本DAO中写的方法注释搬过去，即(七)
+
+
+
+(六).编写实体DAO实现类
+问题：
+上接(五)问题后，那就还得写Message实体类和对应的DAO实现类，其中实体类属性需要有创建时间和更新时间，可以用LocalDateTime，它可以与MySQL中的timestamp对应
+想调用BaseDAO方法发现用不了，导入具体包也用不了，这是因为方法不是静态方法，需要实例化对象来调用，而BaseDAO又设成了抽象类，所以这里不要忘了实体DAO类继承BaseDAO以使用父类方法
+测试AdminDAO的selectAll()时，检查到sql语句不应该写select * from admin，这样的话没有别名，表中的列字段值与实体类的属性值无法对应上，导致抛出异常java.lang.NoSuchFieldException: ad_id
+即使性别在数据库中设置了枚举值'M'或'F'，在实体类中还是要设置String而非Character，因为当MySQL的enum类型本质上存储的是数值索引或字符串字面量，返回时JDBC驱动会将其转换为String类型
+数据库的date类型不支持直接映射给LocalDate，java.sql.Date才支持，用LocalDate则需要转换一下，用Date里的实例方法toLocalDate()；instanceof在运行时进行类型检查，用于检查对象是否是某个特定类或接口的实例，ResultSet的getObject()返回类型是Object(编译时类型)，但根据数据库字段的类型，实际对象可能是String、Integer、java.sql.Date等子类对象(运行时类型)，所以属于多态，可以用instanceof，然后要用子类特有方法的话需要强转
+
+补充：
+学生、老师、课程、消息的的插入功能需要有主键回显的操作，所以在BaseDAO中增加一个insert方法专门用于这四个需要主键回显的插入操作
+写完一个方法测试一个方法，系统写完后把自增值改成当前最大值+1，且修改一下toString方法
+若传入的性别不是"M"或"F"，则会抛出SQL异常：Data truncated for column 'stu_gender' at row 1
+
+
+
+
+(七).编写实体服务类
+问题：
+(五)的时候正好只把管理员、学生、老师的功能注释写出来了，成绩和课程没写，把注释搬到对应的Service类后，想明白了成绩和课程应该是不需要服务类的，只要有DAO即可，与新建的消息一样
