@@ -326,7 +326,11 @@ public class AdminService
                 System.out.println("删除学生将导致以上数据级联删除！");
             }
         }
-        catch (Exception _) {}
+        catch (Exception _)
+        {
+            // Actually, this exception will never be caught.
+            // We have prerequisite argument validation before real execution.
+        }
         System.out.print("确认删除？按1确认，按0取消：");
         int select = SystemUtil.inputSelect(SELECT_TWO);
         if (select == 0)
@@ -1664,7 +1668,7 @@ public class AdminService
         String couMajor = SystemUtil.getValidString("请输入新课程的所属专业(输入0可退出操作)：", s -> !s.isEmpty() && !s.matches(".*\\s.*"), "所属专业不能有空白字符，不能为空！", null, false, null);
         if (couMajor == null)
             couFunctions();
-        int couCre = SystemUtil.getRangeInteger("请输入新课程的学分(输入0可退出操作)：", 0, 10, "学分必须是[1, 10]之间的整数！");
+        int couCre = SystemUtil.getIntInRange("请输入新课程的学分(输入0可退出操作)：", 0, 10, "学分必须是[1, 10]之间的整数！");
         if (couCre == 0)
             couFunctions();
 
@@ -1823,7 +1827,7 @@ public class AdminService
             case 0 -> couFunctions();
             case 1 ->
             {
-                couCre = SystemUtil.getRangeInteger("请输入该课程的新学分(输入0可退出操作)：", 0, 10, "学分必须是[1, 10]之间的整数！");
+                couCre = SystemUtil.getIntInRange("请输入该课程的新学分(输入0可退出操作)：", 0, 10, "学分必须是[1, 10]之间的整数！");
                 if (couCre == 0)
                     couFunctions();
             }

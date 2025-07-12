@@ -14,7 +14,7 @@ import java.util.Properties;
  *      2.对外提供在ThreadLocal中获取连接的方法
  *      3.对外提供回收连接的方法，且将连接对象从ThreadLocal中归还给Druid连接池
  */
-public class JDBCUtil
+public final class JDBCUtil
 {
     //整个应用共享同一个DataSource和ThreadLocal实例
     private static DataSource dataSource;

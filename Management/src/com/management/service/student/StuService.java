@@ -164,6 +164,7 @@ public class StuService
     /**
      * 增加选课(前提：该授课计划还未开始)
      */
+    // addCourseSelection
     private void addGrade()
     {
         CourseDAO courseDAO = new CourseDAO();

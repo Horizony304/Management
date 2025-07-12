@@ -7,11 +7,13 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+// TeacherCourseEntity
+// TeacherCourseRelationEntity
 public class TeaCouEntity
 {
     private Integer id;
     private Integer teaId;
-    private Integer couId;
+    private Integer couId; // courseId
 
     @Override
     public String toString()

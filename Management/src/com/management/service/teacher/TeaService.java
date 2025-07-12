@@ -315,7 +315,7 @@ public class TeaService
                 System.out.println("学号：" + student.getStuId());
                 System.out.println("姓名：" + student.getStuName());
                 System.out.println("课程名：" + course.getCouName());
-                int score = SystemUtil.getRangeInteger("请输入您要录入的分数(输入0可退出操作)：", 0, 100, "分数必须是[1, 100]之间的整数！");
+                int score = SystemUtil.getIntInRange("请输入您要录入的分数(输入0可退出操作)：", 0, 100, "分数必须是[1, 100]之间的整数！");
                 if (score == 0)
                     functions();
                 GradeEntity gradeNew = new GradeEntity(null, grade.getTeachId(), grade.getStuId(), score);
@@ -370,7 +370,7 @@ public class TeaService
                 int select = SystemUtil.inputSelect(SELECT_TWO);
                 if (select == 0)
                     continue;
-                int score = SystemUtil.getRangeInteger("请输入您要修改的分数(输入0可退出操作)：", 0, 100, "分数必须是[1, 100]之间的整数！");
+                int score = SystemUtil.getIntInRange("请输入您要修改的分数(输入0可退出操作)：", 0, 100, "分数必须是[1, 100]之间的整数！");
                 if (score == 0)
                     functions();
                 GradeEntity gradeNew = new GradeEntity(null, grade.getTeachId(), grade.getStuId(), score);

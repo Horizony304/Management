@@ -272,7 +272,7 @@ public class SystemUtil
      * @param errMes 不在范围内时反馈的错误信息
      * @return 有效的整数且在范围内
      */
-    public static Integer getRangeInteger(String prompt, int min, int max, String errMes)
+    public static Integer getIntInRange(String prompt, int min, int max, String errMes)
     {
         int res;
         while (true)
@@ -302,6 +302,8 @@ public class SystemUtil
      * @param errorMes 不符合valid时反馈的错误信息
      * @param valid    有效的数字(按日期的月日顺序输入，比如[9, 1], [1, 15], [2, 15], [6, 30])
      * @return 有效的日期字段
+     * LocalDate beginDate
+     * int previousYear
      */
     public static LocalDate getValidDate(String prompt, Integer big, String errorMes, int... valid)
     {
@@ -360,6 +362,7 @@ public class SystemUtil
      * @param set    判断是否包含在依赖的表里面不存在则报错，
      * @param errMes 输入无效时反馈的错误信息
      * @return 有效的数字字段或0
+     * existent
      */
     public static LocalDate getExistDate(String prompt, Set<LocalDate> set, String errMes)
     {
